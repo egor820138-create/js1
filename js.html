@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEON STRIKE: CASUAL FIXED</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background-color: #07090e;
+            color: #fff;
+            font-family: 'Inter', system-ui, sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .hud-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+            z-index: 10;
+        }
+
+        .hud-left, .hud-right {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .health-bar-container {
+            width: 200px;
+            height: 14px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 7px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+
+        .health-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #34d399);
+            width: 100%;
+            transition: width 0.2s ease, background 0.3s;
+        }
+
+        .powerups-status {
+            font-size: 0.8rem;
+            color: #38bdf8;
+            height: 20px;
+            margin-top: 2px;
+        }
+
+        .game-over-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(7, 9, 14, 0.85);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+
+        .game-over-screen.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .game-over-screen h1 {
+            font-size: 4rem;
+            color: #ef4444;
+            text-shadow: 0 0 30px rgba(239, 68, 68, 0.6);
+            margin-bottom: 10px;
+        }
+
+        .game-over-screen p {
+            color: #94a3b8;
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+        }
+
+        .btn-restart {
+            padding: 16px 36px;
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+            transition: all 0.2s;
+        }
+
+        .btn-restart:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 30px rgba(99, 102, 241, 0.6);
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.4);
+            font-size: 0.85rem;
+            pointer-events: none;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="hud-overlay">
+        <div class="hud-left">
+            <div>ЩИТ: <span id="health-text">100</span>%</div>
+            <div class="health-bar-container">
+                <div class="health-bar-fill" id="health-bar"></div>
+            </div>
+            <div style="font-size: 0.85rem; color: #a5b4fc; margin-top: 4px;">ПРОБЕЛ — НОВА (<span id="nova-text">READY</span>) | SHIFT — ДЭШ</div>
+            <div class="powerups-status" id="powerups-status"></div>
+        </div>
+        <div class="hud-right" style="align-items: flex-end;">
+            <div>СЧЕТ: <span id="score-text">0</span></div>
+            <div style="color: #f59e0b; font-size: 0.95rem;">КОМБО: x<span id="combo-text">1</span></div>
+            <div style="font-size: 0.8rem; color: #64748b;">ВОЛНА: <span id="wave-text">1</span></div>
+        </div>
+    </div>
+
+    <div class="game-over-screen" id="game-over">
+        <h1>SYSTEM FAILURE</h1>
+        <p>Итоговый счет: <span id="final-score">0</span></p>
+        <button class="btn-restart" id="restart-btn">ПЕРЕЗАГРУЗКА [ENTER]</button>
+    </div>
+
+    <div class="instructions">WASD — движение | КУРСОР — прицел | SHIFT — рывок | ПРОБЕЛ — Нова-взрыв</div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        let score = 0;
+        let combo = 1;
+        let comboTimer = 0;
+        let wave = 1;
+        let waveTimer = 0;
+        let screenShake = 0;
+        let isGameOver = false;
+
+        const keys = { w: false, a: false, s: false, d: false, space: false, shift: false };
+        const mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+
+        window.addEventListener('keydown', e => {
+            if (e.code === 'KeyW' || e.code === 'ArrowUp') keys.w = true;
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.a = true;
+            if (e.code === 'KeyS' || e.code === 'ArrowDown') keys.s = true;
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.d = true;
+            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') triggerDash();
+            if (e.code === 'Space') {
+                if (!keys.space && !isGameOver) triggerNova();
+                keys.space = true;
+            }
+            if (e.code === 'Enter' && isGameOver) resetGame();
+        });
+
+        window.addEventListener('keyup', e => {
+            if (e.code === 'KeyW' || e.code === 'ArrowUp') keys.w = false;
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.a = false;
+            if (e.code === 'KeyS' || e.code === 'ArrowDown') keys.s = false;
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.d = false;
+            if (e.code === 'Space') keys.space = false;
+        });
+
+        canvas.addEventListener('mousemove', e => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 12,
+            speed: 6.0,
+            health: 100,
+            maxHealth: 100,
+            angle: 0,
+            fireCooldown: 0,
+            novaCooldown: 0,
+            dashCooldown: 0,
+            dashTimer: 0,
+            dashDir: { x: 0, y: 0 },
+            isDashInvulnerable: false,
+            powerups: { rapid: 0, spread: 0 }
+        };
+
+        function triggerDash() {
+            if (player.dashCooldown <= 0 && !isGameOver) {
+                let mx = 0, my = 0;
+                if (keys.w) my -= 1;
+                if (keys.s) my += 1;
+                if (keys.a) mx -= 1;
+                if (keys.d) mx += 1;
+                if (mx === 0 && my === 0) {
+                    mx = Math.cos(player.angle);
+                    my = Math.sin(player.angle);
+                } else {
+                    let len = Math.sqrt(mx*mx + my*my);
+                    mx /= len; my /= len;
+                }
+                player.dashDir = { x: mx, y: my };
+                player.dashTimer = 10;
+                player.dashCooldown = 60;
+                player.isDashInvulnerable = true;
+                screenShake = 5;
+                spawnParticlesCount(player.x, player.y, '#38bdf8', 6);
+            }
+        }
+
+        let bullets = [];
+        let enemies = [];
+        let particles = [];
+        let floatTexts = [];
+        let shockwaves = [];
+        let powerups = [];
+
+        function triggerNova() {
+            if (player.novaCooldown <= 0 && !isGameOver) {
+                player.novaCooldown = 240;
+                screenShake = 20;
+                shockwaves.push({ x: player.x, y: player.y, radius: 10, maxRadius: 500, alpha: 1, color: '#6366f1' });
+                
+                for (let i = enemies.length - 1; i >= 0; i--) {
+                    let dx = enemies[i].x - player.x;
+                    let dy = enemies[i].y - player.y;
+                    if (Math.sqrt(dx*dx + dy*dy) < 500) {
+                        spawnExplosion(enemies[i].x, enemies[i].y, enemies[i].color, 15);
+                        score += 50 * combo;
+                        enemies.splice(i, 1);
+                    }
+                }
+            }
+        }
+
+        class Bullet {
+            constructor(x, y, angle) {
+                this.x = x;
+                this.y = y;
+                this.speed = 17;
+                this.vx = Math.cos(angle) * this.speed;
+                this.vy = Math.sin(angle) * this.speed;
+                this.radius = 3.5;
+                this.color = player.powerups.spread > 0 ? '#f59e0b' : '#38bdf8';
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+            }
+            draw() {
+                ctx.save();
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.color;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class Enemy {
+            constructor(waveNum) {
+                const side = Math.floor(Math.random() * 4);
+                if (side === 0) { this.x = Math.random()*canvas.width; this.y = -30; }
+                else if (side === 1) { this.x = canvas.width+30; this.y = Math.random()*canvas.height; }
+                else if (side === 2) { this.x = Math.random()*canvas.width; this.y = canvas.height+30; }
+                else { this.x = -30; this.y = Math.random()*canvas.height; }
+
+                const typeChance = Math.random();
+                if (typeChance < 0.65) {
+                    this.type = 'drone';
+                    this.radius = 11;
+                    this.speed = 0.8 + Math.min(waveNum * 0.04, 0.6);
+                    this.health = 10;
+                    this.color = '#f43f5e';
+                    this.scoreVal = 10;
+                } else if (typeChance < 0.9) {
+                    this.type = 'speedster';
+                    this.radius = 8;
+                    this.speed = 1.3 + Math.min(waveNum * 0.05, 0.7);
+                    this.health = 8;
+                    this.color = '#fb923c';
+                    this.scoreVal = 20;
+                } else {
+                    this.type = 'tank';
+                    this.radius = 18;
+                    this.speed = 0.45 + Math.min(waveNum * 0.02, 0.4);
+                    this.health = 35;
+                    this.color = '#a855f7';
+                    this.scoreVal = 40;
+                }
+            }
+
+            update() {
+                const angle = Math.atan2(player.y - this.y, player.x - this.x);
+                this.x += Math.cos(angle) * this.speed;
+                this.y += Math.sin(angle) * this.speed;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                const angle = Math.atan2(player.y - this.y, player.x - this.x);
+                ctx.rotate(angle);
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.color;
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 2;
+
+                ctx.beginPath();
+                if (this.type === 'drone') {
+                    ctx.arc(0, 0, this.radius, 0, Math.PI*2);
+                } else if (this.type === 'speedster') {
+                    ctx.moveTo(10, 0);
+                    ctx.lineTo(-7, -7);
+                    ctx.lineTo(-4, 0);
+                    ctx.lineTo(-7, 7);
+                    ctx.closePath();
+                } else {
+                    ctx.rect(-this.radius, -this.radius, this.radius*2, this.radius*2);
+                }
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        class Powerup {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                const r = Math.random();
+                if (r < 0.4) { this.type = 'health'; this.color = '#10b981'; this.label = '+HP'; }
+                else if (r < 0.7) { this.type = 'rapid'; this.color = '#38bdf8'; this.label = 'FAST'; }
+                else { this.type = 'spread'; this.color = '#f59e0b'; this.label = 'SPREAD'; }
+                this.radius = 9;
+                this.life = 700;
+            }
+            update() {
+                this.life--;
+            }
+            draw() {
+                if (this.life < 120 && Math.floor(this.life / 10) % 2 === 0) return;
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.strokeStyle = this.color;
+                ctx.fillStyle = 'rgba(7,9,14,0.85)';
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = this.color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI*2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 8px Inter';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.label, 0, 0);
+                ctx.restore();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 4 + 1;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.size = Math.random() * 2.5 + 1;
+                this.color = color;
+                this.alpha = 1;
+                this.decay = Math.random() * 0.03 + 0.02;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vx *= 0.94;
+                this.vy *= 0.94;
+                this.alpha -= this.decay;
+            }
+            draw() {
+                if (this.alpha <= 0) return;
+                ctx.save();
+                ctx.globalAlpha = Math.max(this.alpha, 0);
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class FloatText {
+            constructor(x, y, text, color) {
+                this.x = x;
+                this.y = y;
+                this.text = text;
+                this.color = color;
+                this.alpha = 1;
+                this.vy = -1.2;
+            }
+            update() {
+                this.y += this.vy;
+                this.alpha -= 0.02;
+            }
+            draw() {
+                if (this.alpha <= 0) return;
+                ctx.save();
+                ctx.globalAlpha = Math.max(this.alpha, 0);
+                ctx.fillStyle = this.color;
+                ctx.font = 'bold 12px Inter, sans-serif';
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        function spawnExplosion(x, y, color, count = 12) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+            if (Math.random() < 0.28) {
+                powerups.push(new Powerup(x, y));
+            }
+        }
+
+        function spawnParticlesCount(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        function spawnWave() {
+            const count = 3 + wave * 2;
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    if (!isGameOver) enemies.push(new Enemy(wave));
+                }, i * 400);
+            }
+        }
+
+        spawnWave();
+
+        function updateHUD() {
+            document.getElementById('health-text').innerText = Math.max(Math.ceil(player.health), 0);
+            document.getElementById('health-bar').style.width = Math.max((player.health / player.maxHealth) * 100, 0) + '%';
+            document.getElementById('score-text').innerText = score;
+            document.getElementById('combo-text').innerText = combo;
+            document.getElementById('wave-text').innerText = wave;
+            
+            const novaEl = document.getElementById('nova-text');
+            if (player.novaCooldown <= 0) {
+                novaEl.innerText = 'READY';
+                novaEl.style.color = '#34d399';
+            } else {
+                novaEl.innerText = Math.ceil(player.novaCooldown / 60) + 's';
+                novaEl.style.color = '#94a3b8';
+            }
+
+            let statusTxt = [];
+            if (player.powerups.rapid > 0) statusTxt.push(`FAST: ${Math.ceil(player.powerups.rapid/60)}s`);
+            if (player.powerups.spread > 0) statusTxt.push(`SPREAD: ${Math.ceil(player.powerups.spread/60)}s`);
+            document.getElementById('powerups-status').innerText = statusTxt.join(' | ');
+        }
+
+        function resetGame() {
+            player.health = 100;
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            player.novaCooldown = 0;
+            player.dashCooldown = 0;
+            score = 0;
+            combo = 1;
+            wave = 1;
+            bullets = [];
+            enemies = [];
+            particles = [];
+            floatTexts = [];
+            shockwaves = [];
+            powerups = [];
+            player.powerups = { rapid: 0, spread: 0 };
+            isGameOver = false;
+            document.getElementById('game-over').classList.remove('active');
+            spawnWave();
+            updateHUD();
+        }
+
+        document.getElementById('restart-btn').addEventListener('click', resetGame);
+
+        function loop() {
+            if (!isGameOver) {
+                if (player.dashTimer > 0) {
+                    player.x += player.dashDir.x * 14;
+                    player.y += player.dashDir.y * 14;
+                    player.dashTimer--;
+                    if (player.dashTimer === 0) player.isDashInvulnerable = false;
+                    spawnParticlesCount(player.x, player.y, '#38bdf8', 1);
+                } else {
+                    let moveX = 0, moveY = 0;
+                    if (keys.w) moveY -= 1;
+                    if (keys.s) moveY += 1;
+                    if (keys.a) moveX -= 1;
+                    if (keys.d) moveX += 1;
+                    if (moveX !== 0 && moveY !== 0) { moveX *= 0.7071; moveY *= 0.7071; }
+                    player.x += moveX * player.speed;
+                    player.y += moveY * player.speed;
+                }
+
+                player.x = Math.max(20, Math.min(canvas.width - 20, player.x));
+                player.y = Math.max(20, Math.min(canvas.height - 20, player.y));
+                player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+
+                if (player.powerups.rapid > 0) player.powerups.rapid--;
+                if (player.powerups.spread > 0) player.powerups.spread--;
+
+                let fireRate = player.powerups.rapid > 0 ? 3 : 5;
+                if (player.fireCooldown > 0) player.fireCooldown--;
+                if (player.fireCooldown <= 0) {
+                    if (player.powerups.spread > 0) {
+                        bullets.push(new Bullet(player.x, player.y, player.angle - 0.2));
+                        bullets.push(new Bullet(player.x, player.y, player.angle));
+                        bullets.push(new Bullet(player.x, player.y, player.angle + 0.2));
+                    } else {
+                        bullets.push(new Bullet(player.x, player.y, player.angle));
+                    }
+                    player.fireCooldown = fireRate;
+                }
+
+                if (player.novaCooldown > 0) player.novaCooldown--;
+                if (player.dashCooldown > 0) player.dashCooldown--;
+
+                if (comboTimer > 0) { comboTimer--; } else if (combo > 1) { combo = Math.max(1, combo - 1); }
+
+                waveTimer++;
+                if (enemies.length === 0 && waveTimer > 120) { wave++; waveTimer = 0; spawnWave(); }
+
+                for (let i = bullets.length - 1; i >= 0; i--) {
+                    bullets[i].update();
+                    if (bullets[i].x < 0 || bullets[i].x > canvas.width || bullets[i].y < 0 || bullets[i].y > canvas.height) {
+                        bullets.splice(i, 1);
+                    }
+                }
+
+                for (let i = powerups.length - 1; i >= 0; i--) {
+                    powerups[i].update();
+                    if (powerups[i].life <= 0) { powerups.splice(i, 1); continue; }
+                    let dx = powerups[i].x - player.x;
+                    let dy = powerups[i].y - player.y;
+                    if (Math.sqrt(dx*dx + dy*dy) < player.radius + powerups[i].radius + 5) {
+                        const p = powerups[i];
+                        if (p.type === 'health') { player.health = Math.min(player.maxHealth, player.health + 45); floatTexts.push(new FloatText(player.x, player.y-10, '+45 HP', '#10b981')); }
+                        else if (p.type === 'rapid') { player.powerups.rapid = 360; floatTexts.push(new FloatText(player.x, player.y-10, 'FAST!', '#38bdf8')); }
+                        else if (p.type === 'spread') { player.powerups.spread = 360; floatTexts.push(new FloatText(player.x, player.y-10, 'SPREAD!', '#f59e0b')); }
+                        powerups.splice(i, 1);
+                    }
+                }
+
+                for (let i = enemies.length - 1; i >= 0; i--) {
+                    enemies[i].update();
+                    for (let j = bullets.length - 1; j >= 0; j--) {
+                        let dx = enemies[i].x - bullets[j].x;
+                        let dy = enemies[i].y - bullets[j].y;
+                        if (Math.sqrt(dx*dx + dy*dy) < enemies[i].radius + bullets[j].radius) {
+                            enemies[i].health -= 10;
+                            spawnParticlesCount(bullets[j].x, bullets[j].y, enemies[i].color, 2);
+                            bullets.splice(j, 1);
+                            break;
+                        }
+                    }
+
+                    if (enemies[i].health <= 0) {
+                        spawnExplosion(enemies[i].x, enemies[i].y, enemies[i].color, 14);
+                        score += enemies[i].scoreVal * combo;
+                        combo = Math.min(10, combo + 1);
+                        comboTimer = 300;
+                        floatTexts.push(new FloatText(enemies[i].x, enemies[i].y, `+${enemies[i].scoreVal * combo}`, '#34d399'));
+                        enemies.splice(i, 1);
+                        continue;
+                    }
+
+                    let dx = enemies[i].x - player.x;
+                    let dy = enemies[i].y - player.y;
+                    let dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist < enemies[i].radius + player.radius && !player.isDashInvulnerable) {
+                        player.health -= 0.3;
+                        screenShake = 3;
+                        spawnParticlesCount(player.x, player.y, '#ef4444', 1);
+                        if (player.health <= 0) {
+                            isGameOver = true;
+                            document.getElementById('final-score').innerText = score;
+                            document.getElementById('game-over').classList.add('active');
+                        }
+                    }
+                }
+
+                for (let i = shockwaves.length - 1; i >= 0; i--) {
+                    shockwaves[i].radius += 18;
+                    shockwaves[i].alpha *= 0.92;
+                    if (shockwaves[i].alpha < 0.02) shockwaves.splice(i, 1);
+                }
+
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    particles[i].update();
+                    if (particles[i].alpha <= 0) particles.splice(i, 1);
+                }
+
+                for (let i = floatTexts.length - 1; i >= 0; i--) {
+                    floatTexts[i].update();
+                    if (floatTexts[i].alpha <= 0) floatTexts.splice(i, 1);
+                }
+
+                if (screenShake > 0) screenShake *= 0.9;
+                updateHUD();
+            }
+
+            ctx.save();
+            ctx.fillStyle = '#07090e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (screenShake > 0.5) {
+                let dx = (Math.random() - 0.5) * screenShake * 2;
+                let dy = (Math.random() - 0.5) * screenShake * 2;
+                ctx.translate(dx, dy);
+            }
+
+            drawGrid();
+
+            shockwaves.forEach(sw => {
+                ctx.save();
+                ctx.strokeStyle = sw.color;
+                ctx.globalAlpha = sw.alpha;
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = sw.color;
+                ctx.beginPath();
+                ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI*2);
+                ctx.stroke();
+                ctx.restore();
+            });
+
+            powerups.forEach(p => p.draw());
+
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(player.angle);
+            ctx.shadowBlur = player.isDashInvulnerable ? 25 : 15;
+            ctx.shadowColor = player.isDashInvulnerable ? '#38bdf8' : '#6366f1';
+            ctx.strokeStyle = '#818cf8';
+            ctx.fillStyle = '#1e1b4b';
+            ctx.lineWidth = 2.5;
+
+            ctx.beginPath();
+            ctx.moveTo(14, 0);
+            ctx.lineTo(-10, -10);
+            ctx.lineTo(-5, 0);
+            ctx.lineTo(-10, 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+
+            bullets.forEach(b => b.draw());
+            enemies.forEach(e => e.draw());
+            particles.forEach(p => p.draw());
+            floatTexts.forEach(f => f.draw());
+
+            ctx.restore();
+            requestAnimationFrame(loop);
+        }
+
+        function drawGrid() {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.025)';
+            ctx.lineWidth = 1;
+            const size = 60;
+            for (let x = 0; x < canvas.width; x += size) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+            for (let y = 0; y < canvas.height; y += size) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+            ctx.restore();
+        }
+
+        updateHUD();
+        loop();
+    </script>
+</body>
+</html>

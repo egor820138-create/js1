@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    
+    :root {
+      --bg-primary: #fdfdf0;
+      --bg-card: #ffffff;
+      --bg-infobox: #f8f9fa;
+      --text-main: #333333;
+      --text-muted: #555555;
+      --primary-color: #72b352;
+      --primary-hover: #619a43;
+      --border-color: #e2e8f0;
+      --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      --radius-md: 12px;
+      --radius-sm: 8px;
+    }
+    body.dark {
+      --bg-primary: #1a1a1a;
+      --bg-card: #2d2d2d;
+      --bg-infobox: #3d3d3d;
+      --text-main: #f9f9f9;
+      --text-muted: #cdcdcd;
+      --border-color: #444444;
+    }
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      line-height: 1.7;
+      margin: 0;
+      padding: 40px 20px;
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      transition: background 0.3s, color 0.3s;
+    }
+    .content {
+      max-width: 950px;
+      margin: auto;
+      background: var(--bg-card);
+      padding: 40px;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+    }
+    h1 {
+      text-align: center;
+      font-size: 2.6em;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid var(--border-color);
+    }
+    p {
+      margin-bottom: 20px;
+      text-align: justify;
+      font-size: 1.05em;
+    }
+    .myButton {
+      display: inline-block;
+      cursor: pointer;
+      background: var(--primary-color);
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: 30px;
+      border: none;
+      margin: 5px;
+      transition: all 0.2s ease;
+    }
+    .myButton:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+  </style>
+</head>
+<body>
+  <div class="content">
+    
+    <button class="myButton" onclick="toggleTheme()">Сменить тему</button>
+  </div>
+
+  <script>
+    function toggleTheme() {
+      document.body.classList.toggle("dark");
+    }
+  </script>
+   <h2>Мої роботи</h2>
+      <a href="vipusk.html" class="myButton" target="_blank">1</a>
+      <a href="js2.html" class="myButton" target="_blank">2</a>
+      <a href="js1.html" class="myButton" target="_blank">3</a>
+      <a href="j3.html" class="myButton" target="_blank">4</a>
+            <a href=" https://egor820138-create.github.io/moya-robota/" class="myButton" target="_blank">Моя минула випускна робота!</a>
+
+    
+    </aside>
+    <img src="im/Снимок экрана 2026-10-10 190543.png" alt="" width="300">
+    <p><h1>Про мене</h1></p>
+ <p>Мене звати Єгор. Мені 12 років та я вивчаю джава скрипт!</p>
+
+ 
+</body>
+</html>

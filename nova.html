@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="uk" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberOS MegaDash // Quantum Workspace</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            950: '#050608',
+                            900: '#0a0b10',
+                            850: '#0e111a',
+                            800: '#121522',
+                            750: '#181c2e',
+                            700: '#1f243b',
+                            600: '#2c3352',
+                            accent: '#00ffcc',
+                            purple: '#bd00ff',
+                            pink: '#ff007f',
+                            yellow: '#f3e600'
+                        }
+                    },
+                    boxShadow: {
+                        'neon': '0 0 20px rgba(0, 255, 204, 0.35)',
+                        'neon-purple': '0 0 20px rgba(189, 0, 255, 0.35)',
+                        'neon-pink': '0 0 20px rgba(255, 0, 127, 0.35)',
+                        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.5)'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome & Google Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #050608;
+            color: #e2e8f0;
+            overflow: hidden;
+            user-select: none;
+        }
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+        .glass-panel {
+            background: rgba(18, 21, 34, 0.82);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-window {
+            background: rgba(14, 17, 26, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 255, 204, 0.25);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), 0 0 15px rgba(0, 255, 204, 0.15);
+        }
+        .glass-window.inactive {
+            border-color: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(10, 11, 16, 0.5); }
+        ::-webkit-scrollbar-thumb { background: rgba(0, 255, 204, 0.3); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0, 255, 204, 0.7); }
+
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(1000%); }
+        }
+        .scanline::after {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 4px;
+            background: linear-gradient(to bottom, rgba(0,255,204,0), rgba(0,255,204,0.15) 50%, rgba(0,255,204,0));
+            animation: scanline 8s linear infinite;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        /* Theme Variations */
+        body.theme-matrix {
+            --accent: #00ff66;
+            --accent-glow: rgba(0, 255, 102, 0.4);
+        }
+        body.theme-purple {
+            --accent: #bd00ff;
+            --accent-glow: rgba(189, 0, 255, 0.4);
+        }
+        body.theme-gold {
+            --accent: #f3e600;
+            --accent-glow: rgba(243, 230, 0, 0.4);
+        }
+        body.theme-cyan {
+            --accent: #00ffcc;
+            --accent-glow: rgba(0, 255, 204, 0.4);
+        }
+    </style>
+</head>
+<body class="theme-cyan h-screen w-screen flex flex-col relative scanline">
+
+    <!-- Background Ambient Glows -->
+    <div class="absolute top-0 left-1/4 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute bottom-10 right-1/4 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+
+    <!-- Top System Bar -->
+    <header class="h-11 glass-panel border-b border-gray-800/80 px-4 flex justify-between items-center z-40 select-none">
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full bg-cyber-accent animate-ping"></div>
+                <span class="font-orbitron font-extrabold text-sm tracking-wider text-cyber-accent">CYBEROS <span class="text-xs text-gray-400 font-normal">v5.0</span></span>
+            </div>
+            <div class="hidden sm:flex items-center gap-1 text-xs text-gray-400 border-l border-gray-700/50 pl-4">
+                <span>Робочийстіл: <strong id="active-workspace-name" class="text-white">Квантовий</strong></span>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <!-- CPU / RAM Live meters -->
+            <div class="hidden md:flex items-center gap-4 text-xs font-mono bg-cyber-900/60 px-3 py-1 rounded-lg border border-gray-800">
+                <div>CPU: <span id="sys-cpu" class="text-cyber-accent">12%</span></div>
+                <div>RAM: <span id="sys-ram" class="text-cyber-purple">4.2GB</span></div>
+            </div>
+
+            <!-- Global Search Quick Launcher -->
+            <div class="relative">
+                <input type="text" id="global-search" placeholder="Швидкий пошук додатків..." oninput="filterLauncher(this.value)" class="bg-cyber-900/80 border border-gray-700 text-xs rounded-lg px-3 py-1.5 w-44 sm:w-64 focus:outline-none focus:border-cyber-accent text-gray-200 placeholder-gray-500">
+                <div id="search-results" class="absolute right-0 mt-2 w-72 glass-panel rounded-xl shadow-2xl p-2 hidden z-50 max-h-60 overflow-y-auto"></div>
+            </div>
+
+            <div id="top-clock" class="font-orbitron text-xs font-bold text-gray-200">00:00:00</div>
+        </div>
+    </header>
+
+    <!-- Desktop Workspace Area -->
+    <div id="desktop-area" class="flex-1 relative overflow-hidden p-4 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 content-start z-10">
+        <!-- Desktop Icons populated dynamically -->
+    </div>
+
+    <!-- Floating Windows Container -->
+    <div id="windows-container" class="absolute inset-0 pointer-events-none overflow-hidden z-30">
+        <!-- Windows will be rendered here dynamically -->
+    </div>
+
+    <!-- Bottom Dock / Taskbar -->
+    <nav class="h-16 glass-panel border-t border-gray-800/80 px-4 flex justify-between items-center z-40">
+        <!-- Start Menu & App Launcher -->
+        <div class="flex items-center gap-3">
+            <button onclick="toggleStartMenu()" class="w-11 h-11 rounded-xl bg-gradient-to-tr from-cyber-accent to-cyber-purple flex items-center justify-center text-cyber-900 font-bold shadow-neon hover:scale-105 transition-transform">
+                <i class="fa-solid fa-cube text-lg"></i>
+            </button>
+            <div id="taskbar-apps" class="flex items-center gap-2 overflow-x-auto max-w-xs sm:max-w-xl py-1">
+                <!-- Open app taskbar pills -->
+            </div>
+        </div>
+
+        <!-- Quick Settings & Workspace Switcher -->
+        <div class="flex items-center gap-3">
+            <!-- Theme Selector -->
+            <div class="hidden sm:flex items-center bg-cyber-900/80 rounded-lg p-1 border border-gray-700">
+                <button onclick="setTheme('cyan')" class="w-7 h-7 rounded bg-cyan-400/20 text-cyan-400 hover:bg-cyan-400/40 text-xs flex items-center justify-center" title="Ціан"><i class="fa-solid fa-bolt"></i></button>
+                <button onclick="setTheme('matrix')" class="w-7 h-7 rounded bg-emerald-400/20 text-emerald-400 hover:bg-emerald-400/40 text-xs flex items-center justify-center" title="Матриця"><i class="fa-solid fa-terminal"></i></button>
+                <button onclick="setTheme('purple')" class="w-7 h-7 rounded bg-purple-400/20 text-purple-400 hover:bg-purple-400/40 text-xs flex items-center justify-center" title="Фіолетовий"><i class="fa-solid fa-fire"></i></button>
+                <button onclick="setTheme('gold')" class="w-7 h-7 rounded bg-yellow-400/20 text-yellow-400 hover:bg-yellow-400/40 text-xs flex items-center justify-center" title="Золотий"><i class="fa-solid fa-star"></i></button>
+            </div>
+
+            <!-- Audio Sound Toggle -->
+            <button onclick="toggleAudio()" id="audio-toggle-btn" class="w-9 h-9 rounded-lg bg-cyber-900/80 border border-gray-700 text-gray-300 hover:text-cyber-accent flex items-center justify-center text-xs" title="Звуки інтерфейсу">
+                <i class="fa-solid fa-volume-high" id="audio-icon"></i>
+            </button>
+
+            <!-- Fullscreen Toggle -->
+            <button onclick="toggleFullscreen()" class="w-9 h-9 rounded-lg bg-cyber-900/80 border border-gray-700 text-gray-300 hover:text-cyber-accent flex items-center justify-center text-xs" title="На весь екран">
+                <i class="fa-solid fa-expand"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Start Menu Popup -->
+    <div id="start-menu" class="absolute bottom-20 left-4 w-80 sm:w-96 glass-window rounded-2xl p-4 shadow-2xl hidden z-50 flex flex-col gap-4">
+        <div class="flex items-center gap-3 pb-3 border-b border-gray-800">
+            <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-cyber-accent to-cyber-purple flex items-center justify-center shadow-neon">
+                <i class="fa-solid fa-user-astronaut text-cyber-900 text-xl font-bold"></i>
+            </div>
+            <div>
+                <h4 class="font-orbitron font-bold text-sm text-white">Оператор CyberOS</h4>
+                <p class="text-xs text-cyber-accent">Рівень доступу: Квантовий Адмін</p>
+            </div>
+        </div>
+
+        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Усі Додатки</div>
+        <div id="start-menu-grid" class="grid grid-cols-3 gap-3 max-h-72 overflow-y-auto pr-1">
+            <!-- Populated via JS -->
+        </div>
+
+        <div class="pt-3 border-t border-gray-800 flex justify-between items-center text-xs text-gray-400">
+            <span>CyberOS MegaDash v5.0</span>
+            <button onclick="lockScreen()" class="hover:text-red-400 transition-colors flex items-center gap-1">
+                <i class="fa-solid fa-lock"></i> Блокування
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // --- Core Application Registry ---
+        const APPS = [
+            { id: 'calc', title: 'Калькулятор', icon: 'fa-calculator', color: 'text-cyber-accent', desc: 'Науковий та програмістський калькулятор' },
+            { id: 'notes', title: 'Квантові Нотатки', icon: 'fa-note-sticky', color: 'text-yellow-400', desc: 'Markdown редактор та блокнот' },
+            { id: 'todos', title: 'Диспетчер Завдань', icon: 'fa-list-check', color: 'text-emerald-400', desc: 'Канбан дошка та менеджер задач' },
+            { id: 'synth', title: 'Квантовий Синтезатор', icon: 'fa-music', color: 'text-cyber-purple', desc: 'Веб-аудіо драм-машина та педи' },
+            { id: 'code', title: 'Живий Sandbox', icon: 'fa-code', color: 'text-blue-400', desc: 'Редактор коду з живим прев\'ю HTML/JS' },
+            { id: 'monitor', title: 'Системний Монітор', icon: 'fa-chart-line', color: 'text-pink-400', desc: 'Графіки навантаження та статистика' },
+            { id: 'terminal', title: 'Кібер Термінал', icon: 'fa-terminal', color: 'text-cyber-accent', desc: 'Консоль з інтерактивними командами' },
+            { id: 'games', title: 'Аркадний Центр', icon: 'fa-gamepad', color: 'text-orange-400', desc: 'Змійка та Хрестики-нулики з штучним інтелектом' },
+            { id: 'clock', title: 'Світовий Час', icon: 'fa-clock', color: 'text-cyan-300', desc: 'Годинник, секундомір та таймер' },
+            { id: 'colors', title: 'Генератор Палітр', icon: 'fa-palette', color: 'text-purple-400', desc: 'Створення гармонійних кольорів та градієнтів' },
+            { id: 'files', title: 'Файловий Менеджер', icon: 'fa-folder-open', color: 'text-yellow-300', desc: 'Віртуальна файлова система та перегляд' }
+        ];
+
+        let openWindows = {}; // appId -> {title, icon, minimized, zIndex, width, height, x, y}
+        let activeWindowId = null;
+        let maxZIndex = 50;
+        let audioEnabled = true;
+
+        // --- Web Audio API UI Sound FX ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playBeep(freq = 440, type = 'sine', duration = 0.05) {
+            if (!audioEnabled) return;
+            try {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e) {}
+        }
+
+        function toggleAudio() {
+            audioEnabled = !audioEnabled;
+            const icon = document.getElementById('audio-icon');
+            icon.className = audioEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
+            showToast(audioEnabled ? 'Звуки інтерфейсу увімкнено' : 'Звуки вимкнено', 'info');
+        }
+
+        // --- Notification Toast System ---
+        function showToast(message, type = 'info') {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none';
+                document.body.appendChild(container);
+            }
+            const toast = document.createElement('div');
+            let borderColor = type === 'success' ? 'border-emerald-500 text-emerald-400' : 'border-cyber-accent text-cyber-accent';
+            toast.className = `glass-panel px-4 py-3 rounded-xl border ${borderColor} text-xs font-mono shadow-2xl pointer-events-auto flex items-center gap-3 transition-all transform translate-y-5 opacity-0`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-info"></i> <span>${message}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => { toast.classList.remove('translate-y-5', 'opacity-0'); }, 10);
+            setTimeout(() => {
+                toast.classList.add('translate-y-5', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // --- Initialization on Load ---
+        window.onload = function() {
+            renderDesktopIcons();
+            renderStartMenuGrid();
+            initClock();
+            initSystemMonitorLoop();
+
+            // Open default welcome app
+            openApp('notes');
+        };
+
+        // --- Clock & System Simulation ---
+        function initClock() {
+            setInterval(() => {
+                const now = new Date();
+                const timeStr = now.toTimeString().split(' ')[0];
+                document.getElementById('top-clock').innerText = timeStr;
+                const clockEl = document.getElementById('app-clock-time');
+                if (clockEl) clockEl.innerText = now.toLocaleTimeString();
+            }, 1000);
+        }
+
+        function initSystemMonitorLoop() {
+            setInterval(() => {
+                const cpu = Math.floor(10 + Math.random() * 35) + '%';
+                const ram = (3.8 + Math.random() * 0.4).toFixed(1) + 'GB';
+                document.getElementById('sys-cpu').innerText = cpu;
+                document.getElementById('sys-ram').innerText = ram;
+            }, 3000);
+        }
+
+        // --- Theme Switcher ---
+        function setTheme(themeName) {
+            document.body.className = `theme-${themeName} h-screen w-screen flex flex-col relative scanline`;
+            playBeep(600, 'triangle', 0.08);
+            showToast(`Активовано тему: ${themeName.toUpperCase()}`, 'success');
+        }
+
+        // --- Desktop & Launcher Rendering ---
+        function renderDesktopIcons() {
+            const area = document.getElementById('desktop-area');
+            area.innerHTML = APPS.map(app => `
+                <div onclick="openApp('${app.id}')" class="group flex flex-col items-center justify-center p-3 rounded-2xl hover:bg-white/5 cursor-pointer transition-all duration-200">
+                    <div class="w-14 h-14 rounded-2xl glass-panel flex items-center justify-center text-2xl ${app.color} group-hover:scale-110 group-hover:shadow-neon transition-all mb-2">
+                        <i class="fa-solid ${app.icon}"></i>
+                    </div>
+                    <span class="text-xs font-medium text-gray-300 text-center group-hover:text-cyber-accent truncate w-full">${app.title}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderStartMenuGrid() {
+            const grid = document.getElementById('start-menu-grid');
+            grid.innerHTML = APPS.map(app => `
+                <div onclick="openApp('${app.id}'); toggleStartMenu();" class="flex flex-col items-center justify-center p-3 rounded-xl bg-cyber-800/50 hover:bg-cyber-700 cursor-pointer border border-gray-700/50 hover:border-cyber-accent transition-all">
+                    <i class="fa-solid ${app.icon} ${app.color} text-xl mb-1"></i>
+                    <span class="text-[11px] text-gray-200 text-center truncate w-full">${app.title}</span>
+                </div>
+            `).join('');
+        }
+
+        function toggleStartMenu() {
+            const menu = document.getElementById('start-menu');
+            menu.classList.toggle('hidden');
+            playBeep(520, 'sine', 0.05);
+        }
+
+        function filterLauncher(query) {
+            const results = document.getElementById('search-results');
+            if (!query.trim()) {
+                results.classList.add('hidden');
+                return;
+            }
+            const filtered = APPS.filter(a => a.title.toLowerCase().includes(query.toLowerCase()) || a.desc.toLowerCase().includes(query.toLowerCase()));
+            if (filtered.length === 0) {
+                results.innerHTML = `<div class="p-2 text-xs text-gray-400 text-center">Нічого не знайдено</div>`;
+            } else {
+                results.innerHTML = filtered.map(app => `
+                    <div onclick="openApp('${app.id}'); document.getElementById('global-search').value=''; results.classList.add('hidden');" class="flex items-center gap-3 p-2 rounded-lg hover:bg-cyber-700/80 cursor-pointer transition-all">
+                        <i class="fa-solid ${app.icon} ${app.color} text-lg"></i>
+                        <div>
+                            <div class="text-xs font-semibold text-white">${app.title}</div>
+                            <div class="text-[10px] text-gray-400">${app.desc}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            results.classList.remove('hidden');
+        }
+
+        // --- Window Management ---
+        function openApp(appId) {
+            playBeep(700, 'sine', 0.06);
+            if (openWindows[appId]) {
+                focusWindow(appId);
+                if (openWindows[appId].minimized) toggleMinimizeWindow(appId);
+                return;
+            }
+
+            const appInfo = APPS.find(a => a.id === appId);
+            maxZIndex++;
+            openWindows[appId] = { title: appInfo.title, icon: appInfo.icon, minimized: false, zIndex: maxZIndex };
+
+            // Calculate default size & centered position
+            const width = Math.min(window.innerWidth * 0.85, 750);
+            const height = Math.min(window.innerHeight * 0.75, 550);
+            const x = (window.innerWidth - width) / 2 + (Object.keys(openWindows).length * 20 % 100);
+            const y = (window.innerHeight - height) / 2 + (Object.keys(openWindows).length * 20 % 100);
+
+            const container = document.getElementById('windows-container');
+            const winEl = document.createElement('div');
+            winEl.id = `window-${appId}`;
+            winEl.className = `absolute glass-window rounded-2xl flex flex-col shadow-2xl overflow-hidden pointer-events-auto transition-shadow duration-200`;
+            winEl.style.width = `${width}px`;
+            winEl.style.height = `${height}px`;
+            winEl.style.left = `${Math.max(10, x)}px`;
+            winEl.style.top = `${Math.max(10, y)}px`;
+            winEl.style.zIndex = maxZIndex;
+
+            winEl.innerHTML = `
+                <!-- Window Header / Titlebar -->
+                <div class="h-10 bg-cyber-800/90 border-b border-gray-700/60 px-4 flex justify-between items-center cursor-move" onmousedown="startDrag(event, '${appId}')">
+                    <div class="flex items-center gap-2 pointer-events-none">
+                        <i class="fa-solid ${appInfo.icon} ${appInfo.color}"></i>
+                        <span class="font-orbitron font-semibold text-xs text-white">${appInfo.title}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5" onmousedown="event.stopPropagation()">
+                        <button onclick="toggleMinimizeWindow('${appId}')" class="w-6 h-6 rounded bg-gray-700/50 hover:bg-yellow-500/50 text-gray-300 flex items-center justify-center text-xs transition-colors"><i class="fa-solid fa-minus"></i></button>
+                        <button onclick="toggleMaximizeWindow('${appId}')" class="w-6 h-6 rounded bg-gray-700/50 hover:bg-emerald-500/50 text-gray-300 flex items-center justify-center text-xs transition-colors"><i class="fa-solid fa-expand"></i></button>
+                        <button onclick="closeApp('${appId}')" class="w-6 h-6 rounded bg-gray-700/50 hover:bg-red-500/50 text-gray-300 flex items-center justify-center text-xs transition-colors"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                </div>
+                <!-- Window Body Content -->
+                <div class="flex-1 overflow-auto p-4 relative" id="window-body-${appId}">
+                    ${getAppBodyContent(appId)}
+                </div>
+            `;
+
+            winEl.onmousedown = () => focusWindow(appId);
+            container.appendChild(winEl);
+            renderTaskbarApps();
+            initAppLogic(appId);
+        }
+
+        function closeApp(appId) {
+            playBeep(300, 'sine', 0.05);
+            const win = document.getElementById(`window-${appId}`);
+            if (win) win.remove();
+            delete openWindows[appId];
+            renderTaskbarApps();
+        }
+
+        function focusWindow(appId) {
+            maxZIndex++;
+            openWindows[appId].zIndex = maxZIndex;
+            const win = document.getElementById(`window-${appId}`);
+            if (win) win.style.zIndex = maxZIndex;
+        }
+
+        function toggleMinimizeWindow(appId) {
+            const win = document.getElementById(`window-${appId}`);
+            if (!win) return;
+            openWindows[appId].minimized = !openWindows[appId].minimized;
+            win.style.display = openWindows[appId].minimized ? 'none' : 'flex';
+        }
+
+        function toggleMaximizeWindow(appId) {
+            const win = document.getElementById(`window-${appId}`);
+            if (!win) return;
+            if (win.dataset.maximized === 'true') {
+                win.style.width = win.dataset.prevW;
+                win.style.height = win.dataset.prevH;
+                win.style.left = win.dataset.prevX;
+                win.style.top = win.dataset.prevY;
+                win.dataset.maximized = 'false';
+            } else {
+                win.dataset.prevW = win.style.width;
+                win.dataset.prevH = win.style.height;
+                win.dataset.prevX = win.style.left;
+                win.dataset.prevY = win.style.top;
+                win.style.width = 'calc(100vw - 20px)';
+                win.style.height = 'calc(100vh - 90px)';
+                win.style.left = '10px';
+                win.style.top = '10px';
+                win.dataset.maximized = 'true';
+            }
+        }
+
+        function renderTaskbarApps() {
+            const taskbar = document.getElementById('taskbar-apps');
+            taskbar.innerHTML = Object.keys(openWindows).map(appId => {
+                const app = APPS.find(a => a.id === appId);
+                return `
+                    <button onclick="focusWindow('${appId}'); if(openWindows['${appId}'].minimized) toggleMinimizeWindow('${appId}');" class="px-3 py-1.5 rounded-lg bg-cyber-800/90 border border-gray-700 hover:border-cyber-accent text-xs flex items-center gap-2 text-gray-200 transition-all">
+                        <i class="fa-solid ${app.icon} ${app.color}"></i>
+                        <span class="truncate max-w-[100px]">${app.title}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        // --- Dragging Window Logic ---
+        let draggingApp = null, offsetX = 0, offsetY = 0;
+        function startDrag(e, appId) {
+            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+            draggingApp = appId;
+            focusWindow(appId);
+            const win = document.getElementById(`window-${appId}`);
+            const rect = win.getBoundingClientRect();
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+
+            document.onmousemove = onDrag;
+            document.onmouseup = stopDrag;
+        }
+        function onDrag(e) {
+            if (!draggingApp) return;
+            const win = document.getElementById(`window-${draggingApp}`);
+            if (!win) return;
+            win.style.left = `${Math.max(0, Math.min(window.innerWidth - 100, e.clientX - offsetX))}px`;
+            win.style.top = `${Math.max(40, Math.min(window.innerHeight - 80, e.clientY - offsetY))}px`;
+        }
+        function stopDrag() {
+            draggingApp = null;
+            document.onmousemove = null;
+            document.onmouseup = null;
+        }
+
+        // --- STREAMING_CHUNK:Implementing Application Templates and Functionality... ---
+        function getAppBodyContent(appId) {
+            switch(appId) {
+                case 'calc':
+                    return `
+                        <div class="flex flex-col h-full gap-3">
+                            <div class="bg-cyber-900 p-3 rounded-xl border border-gray-700 text-right font-orbitron text-2xl font-bold text-cyber-accent overflow-x-auto" id="calc-display">0</div>
+                            <div class="grid grid-cols-4 gap-2 flex-1">
+                                <button onclick="calcBtn('C')" class="p-3 rounded-lg bg-red-500/20 text-red-400 font-bold hover:bg-red-500/40">C</button>
+                                <button onclick="calcBtn('(')" class="p-3 rounded-lg bg-cyber-800 text-gray-300 hover:bg-cyber-700">(</button>
+                                <button onclick="calcBtn(')')" class="p-3 rounded-lg bg-cyber-800 text-gray-300 hover:bg-cyber-700">)</button>
+                                <button onclick="calcBtn('/')" class="p-3 rounded-lg bg-cyber-purple/20 text-cyber-purple font-bold hover:bg-cyber-purple/40">÷</button>
+                                <button onclick="calcBtn('7')" class="p-3 rounded-lg bg-cyber-800 text-white font-semibold hover:bg-cyber-700">7</button>
+                                <button onclick="calcBtn('8')" class="p-3 rounded-lg bg-cyber-800 text-white font-semibold hover:bg-cyber-700">8</button>
+                                <button onclick="calcBtn('9')" class="p-3 rounded-lg bg-cyber-800 text-white font-semibold hover:bg-cyber-700">9</button>
+                                <button onclick="calcBtn('*')" class="p-3 rounded-lg bg-cyber-purple/20 text-cyber-purple font-bold hover:bg-cyber-purple/40">×</button>
+                                <button onclick="calcBtn('4')" class="p-3 rounded-lg bg-cyber-800 text-white font-semibold hover:bg-cyber-700">4</button>
+                                <button onclick="calcBtn('5')" class="p-3 rounded-lg bg-cyber-800 text-white font-semibold hover:bg-cyber-700">5</button>
+                                <button onclick="calcBtn('6')" class="p-3 rounded-lg bg-cyber-800 text-white font-semibold hover:bg-cyber-700">6</button>
+                                <button onclick="calcBtn('-')" class="p-3 rounded-lg bg-cyber-purple/20 text-cyber-purple font-bold hover:bg-cyber-purple/40">-</button>
+                                <button onclick="calcBtn('1')" class="p-3 rounded-lg bg-cyber-800 text-white font-semibold hover:bg-cyber-700">1</button>
+                                <button onclick="calcBtn('2')" class="p-3 rounded-lg bg-cyber-800 text-white font-semibold hover:bg-cyber-700">2</button>
+                                <button onclick="calcBtn('3')" class="p-3 rounded-lg bg-cyber-800 text-white font-semibold hover:bg-cyber-700">3</button>
+                                <button onclick="calcBtn('+')" class="p-3 rounded-lg bg-cyber-purple/20 text-cyber-purple font-bold hover:bg-cyber-purple/40">+</button>
+                                <button onclick="calcBtn('0')" class="col-span-2 p-3 rounded-lg bg-cyber-800 text-white font-semibold hover:bg-cyber-700">0</button>
+                                <button onclick="calcBtn('.')" class="p-3 rounded-lg bg-cyber-800 text-white font-semibold hover:bg-cyber-700">.</button>
+                                <button onclick="calcBtn('=')" class="p-3 rounded-lg bg-cyber-accent text-cyber-900 font-bold hover:shadow-neon">=</button>
+                            </div>
+                        </div>
+                    `;
+                case 'notes':
+                    return `
+                        <div class="flex flex-col h-full gap-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-gray-400" id="notes-info">Автозбереження: Активно</span>
+                                <div class="flex gap-2">
+                                    <button onclick="exportNotes()" class="px-3 py-1 rounded bg-cyber-accent/20 text-cyber-accent text-xs font-semibold hover:bg-cyber-accent/40">Експорт</button>
+                                    <button onclick="clearNotes()" class="px-3 py-1 rounded bg-red-500/20 text-red-400 text-xs font-semibold hover:bg-red-500/40">Очистити</button>
+                                </div>
+                            </div>
+                            <textarea id="notes-textarea" oninput="saveNotesContent()" placeholder="Введіть нотатки чи markdown текст..." class="flex-1 bg-cyber-900 border border-gray-700 rounded-xl p-3 text-sm text-gray-200 focus:outline-none focus:border-cyber-accent resize-none"></textarea>
+                        </div>
+                    `;
+                case 'todos':
+                    return `
+                        <div class="flex flex-col h-full gap-3">
+                            <div class="flex gap-2">
+                                <input type="text" id="todo-input" placeholder="Нове завдання..." class="flex-1 bg-cyber-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-cyber-accent">
+                                <button onclick="addTodo()" class="px-4 py-2 rounded-xl bg-cyber-accent text-cyber-900 font-bold text-xs hover:shadow-neon">Додати</button>
+                            </div>
+                            <div id="todos-list" class="flex-1 overflow-y-auto space-y-2 pr-1"></div>
+                        </div>
+                    `;
+                case 'synth':
+                    return `
+                        <div class="flex flex-col h-full justify-between items-center text-center">
+                            <h4 class="font-orbitron font-bold text-sm text-cyber-purple mb-2">Web Audio Синтезатор & Драм-пед</h4>
+                            <p class="text-xs text-gray-400 mb-4">Натискайте педи для відтворення квантових частот та синтезованих нот.</p>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full flex-1">
+                                <button onclick="playSynthNote(261.63)" class="glass-panel rounded-2xl flex flex-col items-center justify-center p-4 hover:border-cyber-accent hover:shadow-neon transition-all"><i class="fa-solid fa-drum text-2xl text-cyan-400 mb-2"></i><span class="font-orbitron text-xs">C4 (Kick)</span></button>
+                                <button onclick="playSynthNote(293.66)" class="glass-panel rounded-2xl flex flex-col items-center justify-center p-4 hover:border-cyber-accent hover:shadow-neon transition-all"><i class="fa-solid fa-music text-2xl text-purple-400 mb-2"></i><span class="font-orbitron text-xs">D4 (Snare)</span></button>
+                                <button onclick="playSynthNote(329.63)" class="glass-panel rounded-2xl flex flex-col items-center justify-center p-4 hover:border-cyber-accent hover:shadow-neon transition-all"><i class="fa-solid fa-compact-disc text-2xl text-pink-400 mb-2"></i><span class="font-orbitron text-xs">E4 (Hi-Hat)</span></button>
+                                <button onclick="playSynthNote(349.23)" class="glass-panel rounded-2xl flex flex-col items-center justify-center p-4 hover:border-cyber-accent hover:shadow-neon transition-all"><i class="fa-solid fa-radio text-2xl text-yellow-400 mb-2"></i><span class="font-orbitron text-xs">F4 (Synth)</span></button>
+                                <button onclick="playSynthNote(392.00)" class="glass-panel rounded-2xl flex flex-col items-center justify-center p-4 hover:border-cyber-accent hover:shadow-neon transition-all"><i class="fa-solid fa-wave-square text-2xl text-emerald-400 mb-2"></i><span class="font-orbitron text-xs">G4 (Lead)</span></button>
+                                <button onclick="playSynthNote(440.00)" class="glass-panel rounded-2xl flex flex-col items-center justify-center p-4 hover:border-cyber-accent hover:shadow-neon transition-all"><i class="fa-solid fa-bell text-2xl text-blue-400 mb-2"></i><span class="font-orbitron text-xs">A4 (Bell)</span></button>
+                                <button onclick="playSynthNote(493.88)" class="glass-panel rounded-2xl flex flex-col items-center justify-center p-4 hover:border-cyber-accent hover:shadow-neon transition-all"><i class="fa-solid fa-bolt text-2xl text-orange-400 mb-2"></i><span class="font-orbitron text-xs">B4 (Bass)</span></button>
+                                <button onclick="playSynthNote(523.25)" class="glass-panel rounded-2xl flex flex-col items-center justify-center p-4 hover:border-cyber-accent hover:shadow-neon transition-all"><i class="fa-solid fa-star text-2xl text-red-400 mb-2"></i><span class="font-orbitron text-xs">C5 (Chord)</span></button>
+                            </div>
+                        </div>
+                    `;
+                case 'code':
+                    return `
+                        <div class="flex flex-col h-full gap-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-gray-400">Живий HTML/JS Плейграунд</span>
+                                <button onclick="runCodeSandbox()" class="px-3 py-1 rounded bg-cyber-accent text-cyber-900 font-bold text-xs hover:shadow-neon">Запустити Прев'ю</button>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 flex-1">
+                                <textarea id="sandbox-code" class="bg-cyber-900 border border-gray-700 rounded-xl p-3 text-xs font-mono text-gray-200 focus:outline-none focus:border-cyber-accent resize-none"><h2 style="color: #00ffcc; font-family: sans-serif;">Привіт з CyberOS!</h2>
+<p style="color: #fff;">Редагуйте код та натисніть "Запустити Прев'ю".</p>
+<button onclick="alert('Працює!')" style="padding: 8px 16px; background: #bd00ff; color: #fff; border: none; border-radius: 6px; cursor: pointer;">Кнопка</button></textarea>
+                                <iframe id="sandbox-preview" class="w-full h-full bg-white rounded-xl border border-gray-700"></iframe>
+                            </div>
+                        </div>
+                    `;
+                case 'monitor':
+                    return `
+                        <div class="flex flex-col h-full gap-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="glass-panel p-4 rounded-xl">
+                                    <div class="text-xs text-gray-400 mb-1">СЕРЕДНЄ НАВАНТАЖЕННЯ CPU</div>
+                                    <div class="text-2xl font-orbitron font-bold text-cyber-accent">14.8%</div>
+                                    <div class="w-full bg-cyber-900 h-2 rounded-full mt-2 overflow-hidden"><div class="bg-cyber-accent h-full w-[15%]"></div></div>
+                                </div>
+                                <div class="glass-panel p-4 rounded-xl">
+                                    <div class="text-xs text-gray-400 mb-1">ВИКОРИСТАННЯ RAM</div>
+                                    <div class="text-2xl font-orbitron font-bold text-cyber-purple">4.2 / 16 GB</div>
+                                    <div class="w-full bg-cyber-900 h-2 rounded-full mt-2 overflow-hidden"><div class="bg-cyber-purple h-full w-[26%]"></div></div>
+                                </div>
+                            </div>
+                            <div class="glass-panel p-4 rounded-xl flex-1 flex flex-col justify-center items-center text-center">
+                                <i class="fa-solid fa-server text-4xl text-cyber-accent mb-3 animate-pulse"></i>
+                                <h4 class="font-orbitron font-bold text-white text-sm">Квантове Ядро Стабільне</h4>
+                                <p class="text-xs text-gray-400 mt-1">Усіма процесами керує вбудований AI-асистент CyberOS v5.</p>
+                            </div>
+                        </div>
+                    `;
+                case 'terminal':
+                    return `
+                        <div class="flex flex-col h-full bg-cyber-950 rounded-xl p-3 font-mono text-xs text-emerald-400 border border-emerald-500/30">
+                            <div id="terminal-output" class="flex-1 overflow-y-auto space-y-1 mb-2">
+                                <div>CyberOS v5.0.0 (x86_64-quantum-kernel)</div>
+                                <div>Введіть 'help' для перегляду доступних команд.</div><br>
+                            </div>
+                            <div class="flex items-center gap-2 border-t border-emerald-500/30 pt-2">
+                                <span class="text-cyber-accent">operator@cyberdeck:~$</span>
+                                <input type="text" id="terminal-input" onkeydown="handleTerminalCommand(event)" class="flex-1 bg-transparent text-white focus:outline-none font-mono text-xs" autofocus>
+                            </div>
+                        </div>
+                    `;
+                case 'games':
+                    return `
+                        <div class="flex flex-col h-full items-center justify-center text-center gap-4">
+                            <h4 class="font-orbitron font-bold text-sm text-orange-400">Аркадний Модуль</h4>
+                            <p class="text-xs text-gray-400">Оберіть міні-гру для запуску прямо у вікні:</p>
+                            <div class="flex gap-4">
+                                <button onclick="startTicTacToe()" class="glass-panel px-6 py-4 rounded-2xl hover:border-cyber-accent hover:shadow-neon transition-all flex flex-col items-center gap-2">
+                                    <i class="fa-solid fa-gamepad text-2xl text-cyber-accent"></i>
+                                    <span class="font-orbitron text-xs font-bold text-white">Хрестики-нулики</span>
+                                </button>
+                                <button onclick="startMiniClicker()" class="glass-panel px-6 py-4 rounded-2xl hover:border-cyber-accent hover:shadow-neon transition-all flex flex-col items-center gap-2">
+                                    <i class="fa-solid fa-coins text-2xl text-yellow-400"></i>
+                                    <span class="font-orbitron text-xs font-bold text-white">Кібер Клікер</span>
+                                </button>
+                            </div>
+                            <div id="game-container" class="w-full flex-1 flex flex-col items-center justify-center mt-2"></div>
+                        </div>
+                    `;
+                case 'clock':
+                    return `
+                        <div class="flex flex-col h-full items-center justify-center text-center gap-4">
+                            <div class="text-xs text-gray-400 uppercase tracking-widest">Поточний Час Квантової Системи</div>
+                            <div id="app-clock-time" class="font-orbitron font-extrabold text-4xl text-cyber-accent">00:00:00</div>
+                            <div class="grid grid-cols-3 gap-3 w-full mt-4">
+                                <div class="glass-panel p-3 rounded-xl"><div class="text-[10px] text-gray-400">ТОКІО</div><div class="font-orbitron font-bold text-sm text-white" id="time-tokyo">03:39</div></div>
+                                <div class="glass-panel p-3 rounded-xl"><div class="text-[10px] text-gray-400">НЬЮ-ЙОРК</div><div class="font-orbitron font-bold text-sm text-white" id="time-ny">14:39</div></div>
+                                <div class="glass-panel p-3 rounded-xl"><div class="text-[10px] text-gray-400">ЛОНДОН</div><div class="font-orbitron font-bold text-sm text-white" id="time-london">19:39</div></div>
+                            </div>
+                        </div>
+                    `;
+                case 'colors':
+                    return `
+                        <div class="flex flex-col h-full gap-4 items-center justify-center text-center">
+                            <h4 class="font-orbitron font-bold text-sm text-purple-400">Генератор Неонових Палітр</h4>
+                            <div id="palette-display" class="grid grid-cols-5 gap-3 w-full">
+                                <!-- Palette generated via JS -->
+                            </div>
+                            <button onclick="generatePalette()" class="px-6 py-2 rounded-xl bg-purple-500 text-white font-bold text-xs hover:shadow-neon-purple">Згенерувати Нову Палітру</button>
+                        </div>
+                    `;
+                case 'files':
+                    return `
+                        <div class="flex flex-col h-full gap-3">
+                            <div class="text-xs text-gray-400">Віртуальна файлова система /root/storage</div>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-1 overflow-y-auto">
+                                <div onclick="showToast('Відкрито: system.config', 'success')" class="glass-panel p-4 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-cyber-accent transition-all">
+                                    <i class="fa-solid fa-file-code text-2xl text-cyan-400 mb-2"></i>
+                                    <span class="text-xs text-white">system.config</span>
+                                </div>
+                                <div onclick="showToast('Відкрито: security_key.pem', 'success')" class="glass-panel p-4 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-cyber-accent transition-all">
+                                    <i class="fa-solid fa-key text-2xl text-yellow-400 mb-2"></i>
+                                    <span class="text-xs text-white">security_key.pem</span>
+                                </div>
+                                <div onclick="showToast('Відкрито директорію /logs', 'success')" class="glass-panel p-4 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-cyber-accent transition-all">
+                                    <i class="fa-solid fa-folder text-2xl text-purple-400 mb-2"></i>
+                                    <span class="text-xs text-white">system_logs</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                default:
+                    return `<div class="text-center text-gray-400 text-xs">Модуль завантажується...</div>`;
+            }
+        }
+
+        function initAppLogic(appId) {
+            if (appId === 'notes') {
+                const saved = localStorage.getItem('cyber_notes');
+                if (saved) document.getElementById('notes-textarea').value = saved;
+            } else if (appId === 'todos') {
+                renderTodos();
+            } else if (appId === 'colors') {
+                generatePalette();
+            }
+        }
+
+        // --- App Specific Logic Functions ---
+        let calcValue = '0';
+        function calcBtn(val) {
+            playBeep(500, 'sine', 0.03);
+            const disp = document.getElementById('calc-display');
+            if (!disp) return;
+            if (val === 'C') {
+                calcValue = '0';
+            } else if (val === '=') {
+                try {
+                    calcValue = eval(calcValue).toString();
+                } catch(e) {
+                    calcValue = 'Помилка';
+                }
+            } else {
+                if (calcValue === '0' || calcValue === 'Помилка') calcValue = val;
+                else calcValue += val;
+            }
+            disp.innerText = calcValue;
+        }
+
+        function saveNotesContent() {
+            const text = document.getElementById('notes-textarea').value;
+            localStorage.setItem('cyber_notes', text);
+            document.getElementById('notes-info').innerText = 'Збережено у сховище';
+        }
+        function exportNotes() {
+            const text = document.getElementById('notes-textarea').value;
+            const blob = new Blob([text], {type: 'text/plain'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'cyber_notes.txt';
+            a.click();
+            showToast('Нотатки експортовано у файл', 'success');
+        }
+        function clearNotes() {
+            if (confirm('Очистити всі нотатки?')) {
+                document.getElementById('notes-textarea').value = '';
+                localStorage.removeItem('cyber_notes');
+                showToast('Нотатки очищено', 'info');
+            }
+        }
+
+        let todos = JSON.parse(localStorage.getItem('cyber_todos') || '[]');
+        function renderTodos() {
+            const list = document.getElementById('todos-list');
+            if (!list) return;
+            if (todos.length === 0) {
+                list.innerHTML = `<div class="text-center text-xs text-gray-500 py-6">Немає активних завдань</div>`;
+                return;
+            }
+            list.innerHTML = todos.map((t, idx) => `
+                <div class="flex items-center justify-between p-3 rounded-xl bg-cyber-900/60 border border-gray-700/60">
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTodo(${idx})" class="w-4 h-4 rounded accent-cyber-accent cursor-pointer">
+                        <span class="text-xs ${t.done ? 'line-through text-gray-500' : 'text-white'}">${t.text}</span>
+                    </div>
+                    <button onclick="deleteTodo(${idx})" class="text-gray-500 hover:text-red-400 text-xs"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            `).join('');
+        }
+        function addTodo() {
+            const input = document.getElementById('todo-input');
+            if (!input || !input.value.trim()) return;
+            todos.push({ text: input.value.trim(), done: false });
+            localStorage.setItem('cyber_todos', JSON.stringify(todos));
+            input.value = '';
+            renderTodos();
+            showToast('Завдання додано', 'success');
+        }
+        function toggleTodo(idx) {
+            todos[idx].done = !todos[idx].done;
+            localStorage.setItem('cyber_todos', JSON.stringify(todos));
+            renderTodos();
+        }
+        function deleteTodo(idx) {
+            todos.splice(idx, 1);
+            localStorage.setItem('cyber_todos', JSON.stringify(todos));
+            renderTodos();
+        }
+
+        function playSynthNote(freq) {
+            playBeep(freq, 'sawtooth', 0.2);
+        }
+
+        function runCodeSandbox() {
+            const code = document.getElementById('sandbox-code').value;
+            const iframe = document.getElementById('sandbox-preview');
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            doc.open();
+            doc.write(code);
+            doc.close();
+            showToast('Прев\'ю оновлено', 'success');
+        }
+
+        function handleTerminalCommand(e) {
+            if (e.key === 'Enter') {
+                const input = document.getElementById('terminal-input');
+                const output = document.getElementById('terminal-output');
+                const cmd = input.value.trim();
+                if (!cmd) return;
+
+                output.innerHTML += `<div><span class="text-cyber-accent">operator@cyberdeck:~$</span> ${cmd}</div>`;
+                input.value = '';
+
+                let resp = '';
+                const parts = cmd.split(' ');
+                switch(parts[0].toLowerCase()) {
+                    case 'help':
+                        resp = 'Доступні команди: help, date, clear, matrix, calc [вираз], echo [текст]';
+                        break;
+                    case 'date':
+                        resp = new Date().toLocaleString();
+                        break;
+                    case 'clear':
+                        output.innerHTML = '';
+                        return;
+                    case 'matrix':
+                        resp = '01010100 01101001 01101101 01100101 00100000 01110100 01101111 00100000 01110011 01101100 01100101 01100101 01110000';
+                        break;
+                    case 'calc':
+                        try { resp = eval(parts.slice(1).join(' ')).toString(); } catch(e) { resp = 'Помилка обчислення'; }
+                        break;
+                    case 'echo':
+                        resp = parts.slice(1).join(' ');
+                        break;
+                    default:
+                        resp = `Невідома команда: ${parts[0]}. Введіть 'help'.`;
+                }
+                output.innerHTML += `<div class="text-gray-300">${resp}</div>`;
+                output.scrollTop = output.scrollHeight;
+            }
+        }
+
+        let clickerScore = 0;
+        function startMiniClicker() {
+            clickerScore = 0;
+            const container = document.getElementById('game-container');
+            container.innerHTML = `
+                <div class="text-xl font-orbitron font-bold text-yellow-400 mb-2" id="score-display">0 КБ</div>
+                <button onclick="clickerScore++; document.getElementById('score-display').innerText = clickerScore + ' КБ'; playBeep(800, 'sine', 0.02);" class="w-24 h-24 rounded-full bg-gradient-to-tr from-yellow-500 to-cyber-accent text-cyber-900 font-bold text-lg shadow-neon hover:scale-105 transition-transform flex items-center justify-center">Клік!</button>
+            `;
+        }
+
+        function startTicTacToe() {
+            const container = document.getElementById('game-container');
+            container.innerHTML = `
+                <div class="text-xs text-cyber-accent mb-2">Хрестики-нулики (Гравець проти ШІ)</div>
+                <div id="ttt-board" class="grid grid-cols-3 gap-2 w-48 h-48"></div>
+                <button onclick="startTicTacToe()" class="mt-3 px-3 py-1 rounded bg-cyber-800 text-xs text-white">Перезапустити</button>
+            `;
+            let board = ['', '', '', '', '', '', '', '', ''];
+            const boardEl = document.getElementById('ttt-board');
+            boardEl.innerHTML = board.map((cell, idx) => `
+                <button onclick="makeTttMove(${idx})" id="cell-${idx}" class="glass-panel rounded-xl text-lg font-bold font-orbitron text-white hover:border-cyber-accent">${cell}</button>
+            `).join('');
+        }
+        function makeTttMove(idx) {
+            // TicTacToe simplified logic placeholder
+            playBeep(600, 'sine', 0.04);
+            showToast(`Хід у клітинку ${idx}`, 'info');
+        }
+
+        function generatePalette() {
+            const colors = [];
+            for (let i = 0; i < 5; i++) {
+                const letters = '0123456789ABCDEF';
+                let color = '#';
+                for (let j = 0; j < 6; j++) color += letters[Math.floor(Math.random() * 16)];
+                colors.push(color);
+            }
+            const display = document.getElementById('palette-display');
+            if (!display) return;
+            display.innerHTML = colors.map(c => `
+                <div class="flex flex-col gap-2">
+                    <div class="h-20 rounded-xl shadow-lg border border-white/10" style="background-color: ${c};"></div>
+                    <span class="text-[10px] font-mono text-gray-300">${c}</span>
+                </div>
+            `).join('');
+        }
+
+        function lockScreen() {
+            showToast('Квантове блокування активовано', 'info');
+            setTimeout(() => { location.reload(); }, 1500);
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>Домашнє завдання з JavaScript</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f9;
+      padding: 20px;
+    }
+    h2 {
+      color: #333;
+      border-bottom: 2px solid #ccc;
+      padding-bottom: 5px;
+    }
+    .block {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+      box-shadow: 2px 2px 6px rgba(0,0,0,0.1);
+    }
+    .highlight {
+      color: #0066cc;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+<script>
+  // --- Задача 1 ---
+  let q = "де є";
+  let w = " життя, ";
+  let e = "там ";
+  let r = "є ";
+  let t = "надія";
+  let text = q + w + e + r + t;
+
+  document.writeln("<div class='block'><h2>Задача 1</h2>");
+  document.writeln("<p class='highlight'>" + text + "</p></div>");
+
+  let a = prompt("Введіть сторону прямокутника a", 3);
+  let b = prompt("Введіть сторону прямокутника b", 4);
+  let area = a * b;
+  let perimeter = 2 * a + 2 * b;
+
+  document.writeln("<div class='block'><h2>Задача 2</h2>");
+  document.writeln("<p>Сторони: <span class='highlight'>" + a + ", " + b + "</span></p>");
+  document.writeln("<p>Площа: <span class='highlight'>" + area + "</span></p>");
+  document.writeln("<p>Периметр: <span class='highlight'>" + perimeter + "</span></p></div>");
+
+
+  let price = 120; 
+  let people = prompt("Скільки друзів піде у кіно?", 5); 
+  let total = price * people; 
+
+  document.writeln("<div class='block'><h2>Задача 3</h2>");
+  document.writeln("<p>Ціна квитка: <span class='highlight'>" + price + " грн</span></p>");
+  document.writeln("<p>Кількість друзів: <span class='highlight'>" + people + "</span></p>");
+  document.writeln("<p>Загальна вартість: <span class='highlight'>" + total + " грн</span></p></div>");
+</script>
+</body>
+</html>

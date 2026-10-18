@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="uk" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Гобелен з Байо — Вікіпедія</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        wikiLink: '#0645ad',
+                        wikiLinkDark: '#3399ff',
+                        wikiBg: '#f8f9fa',
+                        wikiDarkBg: '#121212',
+                        wikiCardDark: '#1e1e1e',
+                        wikiBorder: '#a2a9b1',
+                        wikiBorderDark: '#383838'
+                    },
+                    fontFamily: {
+                        serif: ['Linux Libertine', 'Georgia', 'Cambria', 'Times New Roman', 'serif'],
+                        sans: ['sans-serif', 'Arial', 'Helvetica']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #f8f9fa;
+            color: #202122;
+        }
+        .dark body {
+            background-color: #121212;
+            color: #eaecf0;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Linux Libertine', Georgia, serif;
+        }
+        .wiki-link {
+            color: #0645ad;
+            text-decoration: none;
+        }
+        .wiki-link:hover {
+            text-decoration: underline;
+        }
+        .dark .wiki-link {
+            color: #6bf;
+        }
+        .infobox {
+            border: 1px solid #a2a9b1;
+            background-color: #f8f9fa;
+            font-size: 90%;
+        }
+        .dark .infobox {
+            border: 1px solid #383838;
+            background-color: #1e1e1e;
+        }
+        html {
+            scroll-behavior: smooth;
+        }
+        /* Custom scrollbar for sidebar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c8ccd1;
+            border-radius: 3px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #444;
+        }
+    </style>
+</head>
+<body class="transition-colors duration-200">
+
+    <header class="sticky top-0 z-50 bg-white dark:bg-[#1a1a1a] border-b border-[#a2a9b1] dark:border-[#383838] px-4 py-2.5 flex items-center justify-between shadow-sm">
+        <div class="flex items-center space-x-4">
+            <button id="sidebar-toggle" class="text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white p-1 rounded focus:outline-none lg:hidden">
+                <i class="fa-solid fa-bars text-xl"></i>
+            </button>
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 bg-black dark:bg-white text-white dark:text-black font-serif font-bold flex items-center justify-center text-lg rounded">W</div>
+                <span class="font-serif font-bold text-xl tracking-tight hidden sm:inline">Вікіпедія</span>
+                <span class="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-800 rounded text-gray-600 dark:text-gray-400 font-sans">Вільна енциклопедія</span>
+            </div>
+        </div>
+
+        <div class="flex-1 max-w-lg mx-4">
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                    <i class="fa-solid fa-search"></i>
+                </span>
+                <input type="text" id="wiki-search" placeholder="Шукати у Вікіпедії (напр. Галерея, Комета, Гарольд)..." 
+                    class="w-full pl-10 pr-4 py-1.5 text-sm bg-gray-100 dark:bg-[#2a2a2a] border border-[#a2a9b1] dark:border-[#555] rounded-full focus:outline-none focus:border-[#0645ad] dark:focus:border-blue-400 text-gray-900 dark:text-gray-100">
+                <div id="search-results" class="absolute left-0 right-0 mt-1 bg-white dark:bg-[#1e1e1e] border border-[#a2a9b1] dark:border-[#383838] rounded-lg shadow-lg hidden max-h-60 overflow-y-auto z-50"></div>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <button id="theme-toggle" class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition" title="Змінити тему">
+                <i class="fa-solid fa-moon dark:hidden text-lg"></i>
+                <i class="fa-solid fa-sun hidden dark:inline text-lg text-yellow-400"></i>
+            </button>
+            <div class="hidden md:flex items-center space-x-1 text-sm border border-[#a2a9b1] dark:border-[#555] rounded px-2 py-1">
+                <i class="fa-solid fa-language"></i>
+                <span>Укр (uk)</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex min-h-[calc(100vh-60px)]">
+        
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-[#181818] border-r border-[#a2a9b1] dark:border-[#383838] pt-16 lg:pt-4 px-4 pb-10 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-200 overflow-y-auto">
+            <div class="flex items-center justify-between lg:hidden mb-4">
+                <span class="font-bold text-lg font-serif">Зміст</span>
+                <button id="sidebar-close" class="text-gray-500 hover:text-black dark:hover:text-white">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="mb-6">
+                <a href="#top" class="flex items-center space-x-2 text-sm font-semibold text-[#0645ad] dark:text-blue-400 py-1 hover:underline">
+                    <i class="fa-solid fa-house text-xs"></i>
+                    <span>Головна сторінка</span>
+                </a>
+            </div>
+
+            <div class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Зміст статті</div>
+            <nav class="space-y-1 text-sm">
+                <a href="#intro" class="block py-1.5 px-2 rounded hover:bg-gray-100 dark:hover:bg-[#252525] text-gray-800 dark:text-gray-200 transition">1. Вступ</a>
+                <a href="#history" class="block py-1.5 px-2 rounded hover:bg-gray-100 dark:hover:bg-[#252525] text-gray-800 dark:text-gray-200 transition">2. Історія та походження</a>
+                <a href="#description" class="block py-1.5 px-2 rounded hover:bg-gray-100 dark:hover:bg-[#252525] text-gray-800 dark:text-gray-200 transition">3. Опис та композиція</a>
+                <a href="#technique" class="block py-1.5 px-2 rounded hover:bg-gray-100 dark:hover:bg-[#252525] text-gray-800 dark:text-gray-200 transition">4. Техніка виготовлення</a>
+                <a href="#significance" class="block py-1.5 px-2 rounded hover:bg-gray-100 dark:hover:bg-[#252525] text-gray-800 dark:text-gray-200 transition">5. Історичне значення</a>
+                <a href="#gallery" class="block py-1.5 px-2 rounded hover:bg-gray-100 dark:hover:bg-[#252525] text-gray-800 dark:text-gray-200 transition">6. Галерея та інтерактив</a>
+                <a href="#sources" class="block py-1.5 px-2 rounded hover:bg-gray-100 dark:hover:bg-[#252525] text-gray-800 dark:text-gray-200 transition">7. Джерела та література</a>
+            </nav>
+
+            <div class="mt-8 pt-4 border-t border-gray-200 dark:border-gray-800">
+                <div class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Мови мовою проєкту</div>
+                <ul class="space-y-1.5 text-xs text-[#0645ad] dark:text-blue-400">
+                    <li><a href="#" class="hover:underline">English (Bayeux Tapestry)</a></li>
+                    <li><a href="#" class="hover:underline">Français (Tapisserie de Bayeux)</a></li>
+                    <li><a href="#" class="hover:underline">Deutsch (Teppich von Bayeux)</a></li>
+                    <li><a href="#" class="hover:underline">Español (Tapiz de Bayeux)</a></li>
+                </ul>
+            </div>
+        </aside>
+
+        <main class="flex-1 max-w-5xl mx-auto px-4 sm:px-8 py-6 overflow-hidden">
+            
+            <!-- Article Header & Language Notice -->
+            <div class="border-b border-gray-300 dark:border-gray-700 pb-4 mb-6">
+                <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-2">
+                    <span>Ця стаття розповідає про пам'ятку середньовічного мистецтва. Про інші значення див. Байо (значення).</span>
+                    <span class="hidden sm:inline">Останнє редагування: 2 дні тому</span>
+                </div>
+                <h1 class="text-3xl sm:text-4xl font-serif font-normal text-gray-900 dark:text-white">Гобелен з Байо</h1>
+                <div class="text-sm text-gray-600 dark:text-gray-400 mt-1 italic">Матеріал з Вікіпедії — вільної енциклопедії</div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <!-- Main Text Column (2 spans) -->
+                <div class="lg:col-span-2 space-y-8 font-sans text-gray-800 dark:text-gray-200 leading-relaxed">
+                    
+                    <section id="intro" class="space-y-4">
+                        <p class="text-base sm:text-lg">
+                            <b class="font-bold">Гобелен з Байо</b> (фр. <i>Tapisserie de Bayeux</i>) — унікальна пам'ятка вишиваного мистецтва XI століття, що є шедевром романського стилю. Насправді це не гобелен (тканий килим), а довгий вишитий сувій довжиною понад <span class="bg-yellow-100 dark:bg-yellow-900/40 px-1 rounded">68,3 метри</span> та висотою близько 50 сантиметрів.
+                        </p>
+                        <p>
+                            На полотні зображено події, що передували нормандському завоюванню Англії, а також саму ключову <a href="#significance" class="wiki-link">Битву при Гастінгсі</a> 1066 року та протистояння між норманським герцогом <span class="font-serif italic">Вільгельмом Завойовником</span> та англосаксонським королем <span class="font-serif italic">Гарольдом Годвінсоном</span>. Виріб виконано вовняними нитками на лляному полотні з використанням швів «вперед голку» та «стеблового шва».
+                        </p>
+                        <p>
+                            Сьогодні сувій зберігається у спеціальному музеї у місті Байо (Нормандія, Франція) та у 2007 році був внесений до реєстру ЮНЕСКО «Пам'ять світу».
+                        </p>
+                    </section>
+
+                    <section id="history" class="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-4">
+                        <h2 class="text-2xl font-serif font-normal text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-800 pb-1">Історія та походження</h2>
+                        <p>
+                            Точна дата створення гобелена та його замовник досі є предметом гострих дискусій серед істориків. Традиційно вважається, що його виготовили у 1070-х роках у Англії або Франції на замовлення єпископа <b class="font-bold">Одо з Байо</b> (єдинокровного брата Вільгельма Завойовника) для прикрашення новопобудованого собору в Байо у 1077 році.
+                        </p>
+                        <p>
+                            Інша популярна романтична легенда приписує створення вишивки дружині Вільгельма — королеві <span class="font-serif italic">Матильді Фландрській</span> та її фрейлінам. Проте стилістичний аналіз та характер латинських написів вказують радше на роботу англосаксонських майстрів вишивки, які славилися своєю майстерністю у всій Європі (<span class="font-serif italic">Opus Anglicanum</span>).
+                        </p>
+                        <p>
+                            Перша письмова згадка про гобелен датується 1476 роком в інвентарному описі скарбниці собору в Байо. Дивом уникнувши знищення під час Французької революції та Другої світової війни, сувій дійшов до нашого часу у чудовому стані збереження.
+                        </p>
+                    </section>
+
+                    <section id="description" class="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-4">
+                        <h2 class="text-2xl font-serif font-normal text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-800 pb-1">Опис та композиція</h2>
+                        <p>
+                            Розповідь на гобелені розгортається послідовно у вигляді мальовничого коміксу з 58 сцен, супроводжуваних латинськими коментарями (<span class="font-serif italic">tituli</span>). Сюжет поділений на три горизонтальні смуги: широку центральну (де розгортається головна дія) та дві вузькі верхню і нижню облямівки, заповнені зображеннями тварин, міфологічних істот, сценами із сільського життя та байок Езопа.
+                        </p>
+                        <div class="bg-gray-100 dark:bg-[#1e1e1e] border-l-4 border-[#0645ad] p-4 my-4 rounded-r">
+                            <h4 class="font-bold text-sm mb-1 uppercase tracking-wider text-[#0645ad] dark:text-blue-400">Найвідоміші епізоди полотна:</h4>
+                            <ul class="list-disc list-inside space-y-1 text-sm">
+                                <li><b>Присяга Гарольда</b> у Босоні (бл. 1064 р.) на священних реліквіях перед Вільгельмом.</li>
+                                <li><b>Комета Галлея</b> (1066 рік) — поява якої на небесах сприймалася англосаксами як поганий знак для короля Гарольда.</li>
+                                <li><b>Смерть короля Гарольда</b> у битві при Гастінгсі (легендарний епізод зі стрілою в оці, хоча історики сперечаються щодо трактування).</li>
+                            </ul>
+                        </div>
+                        <p>
+                            Колористика вишивки обмежена кількома природними кольорами вовни: теракотовим, синьо-зеленим, золотисто-жовтим, оливковим та темно-синім. Завдяки техніці «підкладання кольору» створюється ілюзія об'єму та динаміки рухів коней і людей.
+                        </p>
+                    </section>
+
+                    <section id="technique" class="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-4">
+                        <h2 class="text-2xl font-serif font-normal text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-800 pb-1">Техніка виготовлення та матеріали</h2>
+                        <p>
+                            Технічно робота виконана на цілісному шматку вибіленого лляного полотна висотою 50 см, що складається з кількох зшитих разом фрагментів. Для вишивки застосовувалися дві основні техніки:
+                        </p>
+                        <ul class="list-disc list-inside space-y-2 pl-2">
+                            <li><b>Стебловий шов (Stem stitch):</b> використовувався для контурів фігур та написів, забезпечуючи чіткість ліній.</li>
+                            <li><b>Шов «уприкріп» (Laid and couched work):</b> заповнював внутрішні частини одягу, коней та архітектурних споруд горизонтальними стібками, зафіксованими поверх короткими вертикальними стібками ниток.</li>
+                        </ul>
+                        <p>
+                            Фарбники для вовни видобувалися з природних джерел: марени (червоний), вайди (синій) та жовтецевих рослин (жовтий). За століття барвники дещо вицвіли, але початкова гармонія кольорів вражає своєю витонченістю.
+                        </p>
+                    </section>
+
+                    <section id="significance" class="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-4">
+                        <h2 class="text-2xl font-serif font-normal text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-800 pb-1">Історичне та культурне значення</h2>
+                        <p>
+                            Гобелен з Байо є безцінним першоджерелом для вивчення раннього середньовіччя. На ньому з небаченою деталізацією зображено:
+                        </p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 my-3">
+                            <div class="p-3 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
+                                <h3 class="font-bold text-sm mb-1 text-[#0645ad] dark:text-blue-400"><i class="fa-solid fa-shield-halved mr-1"></i> Військова справа та озброєння</h3>
+                                <p class="text-xs">Нормандські та англосаксонські лицарі у кольчугах, шоломах з наносами, з важкими списами, мечами та довгими мигдалеподібними щитами.</p>
+                            </div>
+                            <div class="p-3 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
+                                <h3 class="font-bold text-sm mb-1 text-[#0645ad] dark:text-blue-400"><i class="fa-solid fa-ship mr-1"></i> Суднобудування</h3>
+                                <p class="text-xs">Будівництво бойових кораблів драккарного типу з драконячими носами, процес вирубки дерев, кріплення дощок та перевезення коней через Ла-Манш.</p>
+                            </div>
+                        </div>
+                        <p>
+                            Окрім військової тематики, гобелен містить побутові сцени: банкєти з підвішеними щитами, приготування м'яса на вертевах, архітектурні деталі тогочасних замків і церков.
+                        </p>
+                    </section>
+
+                    <section id="gallery" class="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-6">
+                        <h2 class="text-2xl font-serif font-normal text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-800 pb-1">Галерея ключових сцен</h2>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Оберіть сцену нижче, щоб детально ознайомитися з її описом:</p>
+                        
+                        <!-- Interactive Scene Selector Tabs -->
+                        <div class="flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-700 pb-3">
+                            <button onclick="switchScene(0)" class="scene-tab px-3 py-1.5 text-xs font-semibold rounded bg-[#0645ad] text-white transition">Комета Галлея</button>
+                            <button onclick="switchScene(1)" class="scene-tab px-3 py-1.5 text-xs font-semibold rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 transition">Присяга Гарольда</button>
+                            <button onclick="switchScene(2)" class="scene-tab px-3 py-1.5 text-xs font-semibold rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 transition">Битва при Гастінгсі</button>
+                            <button onclick="switchScene(3)" class="scene-tab px-3 py-1.5 text-xs font-semibold rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 transition">Будівництво корабля</button>
+                        </div>
+
+                        <!-- Scene Card Display Area -->
+                        <div id="scene-display" class="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl p-6 shadow-md transition-all">
+                            <div class="flex items-center justify-between mb-3">
+                                <span id="scene-badge" class="text-xs font-bold px-2.5 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">Сцена 32 із 58</span>
+                                <span id="scene-latin" class="text-xs font-serif italic text-gray-500">«ISTI MIRANT STELLA»</span>
+                            </div>
+                            <h3 id="scene-title" class="text-xl font-serif font-bold text-gray-900 dark:text-white mb-2">Поява Комети Галлея</h3>
+                            <div class="w-full h-48 sm:h-56 bg-gray-200 dark:bg-gray-800 rounded-lg overflow-hidden mb-4 relative flex items-center justify-center">
+                                <img id="scene-img" src="https://placehold.co/800x400/222222/ffffff?text=Halley's+Comet+Scene" alt="Scene" class="w-full h-full object-cover">
+                                <div class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-2 py-1 rounded">Ілюстративний фрагмент</div>
+                            </div>
+                            <p id="scene-desc" class="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+                                Англійці захоплено та зі страхом дивляться на нічне небо, де з'явилася комета з хвостом. Король Гарольд сидить на троні, тремтячи від тривоги перед майбутнім вторгненням норманнів. Це перше в історії мистецтва зображення Комети Галлея.
+                            </p>
+                        </div>
+                    </section>
+
+                    <section id="sources" class="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-3">
+                        <h2 class="text-2xl font-serif font-normal text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-800 pb-1">Джерела та література</h2>
+                        <ul class="list-disc list-inside space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
+                            <li>Carola Hicks. <span class="font-serif italic">The Bayeux Tapestry: The Life Story of a Masterpiece</span>. Vintage Books, 2007.</li>
+                            <li>David M. Wilson. <span class="font-serif italic">The Bayeux Tapestry: The Complete Tapestry in Colour</span>. Thames & Hudson, 2004.</li>
+                            <li>Shirley Ann Brown. <span class="font-serif italic">The Bayeux Tapestry: History and Bibliography</span>. Boydell & Brewer, 1988.</li>
+                        </ul>
+                    </section>
+
+                </div>
+
+                <div class="lg:col-span-1">
+                    <div class="infobox rounded-lg p-4 shadow-sm sticky top-20 space-y-4">
+                        <div class="text-center border-b border-gray-300 dark:border-gray-700 pb-3">
+                            <h3 class="font-serif font-bold text-lg text-gray-900 dark:text-white">Гобелен з Байо</h3>
+                            <p class="text-xs text-gray-500 italic mt-0.5">Tapisserie de Bayeux</p>
+                        </div>
+                        
+                        <div class="w-full bg-gray-200 dark:bg-gray-800 rounded overflow-hidden flex items-center justify-center p-2">
+                            <img src="https://placehold.co/400x250/333333/ffffff?text=Bayeux+Tapestry+Detail" alt="Infobox Image" class="rounded w-full object-cover">
+                        </div>
+                        <p class="text-[11px] text-center text-gray-500 italic">Фрагмент кінної атаки норманських лицарів</p>
+
+                        <div class="space-y-2 text-xs divide-y divide-gray-200 dark:divide-gray-800">
+                            <div class="pt-2 flex justify-between">
+                                <span class="font-bold text-gray-600 dark:text-gray-400">Тип:</span>
+                                <span>Вишитий сувій (не гобелен)</span>
+                            </div>
+                            <div class="pt-2 flex justify-between">
+                                <span class="font-bold text-gray-600 dark:text-gray-400">Дата створення:</span>
+                                <span>бл. 1070–1080 рр.</span>
+                            </div>
+                            <div class="pt-2 flex justify-between">
+                                <span class="font-bold text-gray-600 dark:text-gray-400">Місце створення:</span>
+                                <span>Англія або Франція</span>
+                            </div>
+                            <div class="pt-2 flex justify-between">
+                                <span class="font-bold text-gray-600 dark:text-gray-400">Замовник:</span>
+                                <span>Ймовірно, єпископ Одо</span>
+                            </div>
+                            <div class="pt-2 flex justify-between">
+                                <span class="font-bold text-gray-600 dark:text-gray-400">Матеріали:</span>
+                                <span>Вовняні нитки на льоні</span>
+                            </div>
+                            <div class="pt-2 flex justify-between">
+                                <span class="font-bold text-gray-600 dark:text-gray-400">Розміри:</span>
+                                <span>68,38 м × 0,5 м</span>
+                            </div>
+                            <div class="pt-2 flex justify-between">
+                                <span class="font-bold text-gray-600 dark:text-gray-400">Місце зберігання:</span>
+                                <span class="text-right">Музей гобеленів, Байо, Франція</span>
+                            </div>
+                            <div class="pt-2 flex justify-between">
+                                <span class="font-bold text-gray-600 dark:text-gray-400">Статус:</span>
+                                <span class="text-blue-600 dark:text-blue-400">ЮНЕСКО «Пам'ять світу»</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </main>
+    </div>
+
+    <footer class="bg-white dark:bg-[#181818] border-t border-[#a2a9b1] dark:border-[#383838] py-8 px-6 mt-12 text-xs text-gray-600 dark:text-gray-400">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-2">
+                <div class="w-6 h-6 bg-black dark:bg-white text-white dark:text-black font-serif font-bold flex items-center justify-center text-sm rounded">W</div>
+                <span class="font-serif font-bold text-sm">Вікіпедія — вільна енциклопедія</span>
+            </div>
+            <div class="text-center md:text-right space-y-1">
+                <p>Текст доступний за ліцензією Creative Commons Attribution-ShareAlike; можливі додаткові умови.</p>
+                <p>Політика конфіденційності • Опис Вікіпедії • Відмова від відповідальності • Мобільна версія</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Theme Toggle Logic
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const htmlElement = document.documentElement;
+
+        themeToggleBtn.addEventListener('click', () => {
+            if (htmlElement.classList.contains('dark')) {
+                htmlElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                htmlElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        });
+
+        // Check local storage theme
+        if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            htmlElement.classList.add('dark');
+        }
+
+        // Sidebar mobile toggle
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const sidebarClose = document.getElementById('sidebar-close');
+
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.remove('-translate-x-full');
+        });
+
+        sidebarClose.addEventListener('click', () => {
+            sidebar.classList.add('-translate-x-full');
+        });
+
+        // Interactive Gallery Scenes Data
+        const scenes = [
+            {
+                badge: "Сцена 32 із 58",
+                latin: "«ISTI MIRANT STELLA»",
+                title: "Поява Комети Галлея",
+                img: "https://placehold.co/800x400/222222/ffffff?text=Halley's+Comet+Scene",
+                desc: "Англійці захоплено та зі страхом дивляться на нічне небо, де з'явилася комета з хвостом. Король Гарольд сидить на троні, тремтячи від тривоги перед майбутнім вторгненням норманнів. Це перше в історії мистецтва зображення Комети Галлея."
+            },
+            {
+                badge: "Сцена 23 із 58",
+                latin: "«UBI HAROLD SACRAM FECIT WILLELMO DUCI»",
+                title: "Присяга Гарольда Вільгельму",
+                img: "https://placehold.co/800x400/333333/ffffff?text=Harold's+Oath+Scene",
+                desc: "Король Гарольд Годвінсон складає урочисту присягу на вірність герцогові Вільгельму Нормандському, поклавши руки на святі реліквії в святилищі. Пізніше норманни звинуватили Гарольда у порушенні цієї священної клятви."
+            },
+            {
+                badge: "Сцена 50 із 58",
+                latin: "«ET INTERFECIUNT HAROLDUM REX»",
+                title: "Битва при Гастінгсі та смерть Гарольда",
+                img: "https://placehold.co/800x400/444444/ffffff?text=Battle+of+Hastings+Scene",
+                desc: "Кульмінація всього полотна. Англосаксонське воїнство розбите, король Гарольд падає під ударами норманнських вершників. Битва 1066 року кардинально змінила хід історії Британських островів."
+            },
+            {
+                badge: "Сцена 10 із 58",
+                latin: "«WILLELMO DUX: NAVES AIFICARE»",
+                title: "Будівництво бойових кораблів",
+                img: "https://placehold.co/800x400/2a2a2a/ffffff?text=Shipbuilding+Scene",
+                desc: "Майстри та теслярі під наглядом нормандських воєвод вирубують дерева топорами, згинають дошки та збирають флот із понад 700 кораблів для майбутнього перетину протоки Ла-Манш."
+            }
+        ];
+
+        function switchScene(index) {
+            const scene = scenes[index];
+            document.getElementById('scene-badge').innerText = scene.badge;
+            document.getElementById('scene-latin').innerText = scene.latin;
+            document.getElementById('scene-title').innerText = scene.title;
+            document.getElementById('scene-img').src = scene.img;
+            document.getElementById('scene-desc').innerText = scene.desc;
+
+            // Highlight active tab
+            const tabs = document.querySelectorAll('.scene-tab');
+            tabs.forEach((tab, i) => {
+                if (i === index) {
+                    tab.className = "scene-tab px-3 py-1.5 text-xs font-semibold rounded bg-[#0645ad] text-white transition";
+                } else {
+                    tab.className = "scene-tab px-3 py-1.5 text-xs font-semibold rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 transition";
+                }
+            });
+        }
+
+        // Search Functionality
+        const searchInput = document.getElementById('wiki-search');
+        const searchResults = document.getElementById('search-results');
+
+        const searchIndex = [
+            { title: "Вступ та розміри полотна", anchor: "#intro" },
+            { title: "Історія та походження (Одо з Байо)", anchor: "#history" },
+            { title: "Опис та композиція (58 сцен)", anchor: "#description" },
+            { title: "Техніка виготовлення та шви", anchor: "#technique" },
+            { title: "Історичне значення та Битва при Гастінгсі", anchor: "#significance" },
+            { title: "Галерея та інтерактивні візуальні сцени", anchor: "#gallery" },
+            { title: "Комета Галлея на гобелені", anchor: "#gallery" },
+            { title: "Джерела та література", anchor: "#sources" }
+        ];
+
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            if (query.length === 0) {
+                searchResults.classList.add('hidden');
+                searchResults.innerHTML = '';
+                return;
+            }
+
+            const filtered = searchIndex.filter(item => item.title.toLowerCase().includes(query));
+            if (filtered.length > 0) {
+                searchResults.innerHTML = filtered.map(item => `
+                    <a href="${item.anchor}" class="block px-4 py-2 text-xs text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] border-b border-gray-100 dark:border-gray-800 last:border-none">
+                        <i class="fa-solid fa-magnifying-glass mr-2 text-gray-400"></i>${item.title}
+                    </a>
+                `).join('');
+                searchResults.classList.remove('hidden');
+            } else {
+                searchResults.innerHTML = `<div class="px-4 py-2 text-xs text-gray-500">Нічого не знайдено</div>`;
+                searchResults.classList.remove('hidden');
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                searchResults.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
